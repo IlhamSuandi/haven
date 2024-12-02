@@ -1,0 +1,52 @@
+services:
+  client:
+    container_name: haven_client
+    build:
+      context: ./client/
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+    depends_on:
+      - server
+
+  server:
+    container_name: haven_server
+    build:
+      context: ./server/
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    command: ["./bin/api"]
+    volumes:
+      - ./server/:/app/server
+    environment:
+      - DB_HOST=haven_db
+    depends_on:
+      database:
+        condition: service_healthy
+
+  database:
+    container_name: haven_db
+    image: mysql:latest
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ALLOW_EMPTY_PASSWORD: "no"
+      MYSQL_RANDOM_ROOT_PASSWORD: "no"
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  dbdata:
